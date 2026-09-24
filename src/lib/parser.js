@@ -7,7 +7,7 @@ const path = require("path");
 if (typeof global.LISTINGS === "undefined") global.LISTINGS = [];
 if (typeof global.SOUQ_CONFIG === "undefined") global.SOUQ_CONFIG = {};
 
-const FRONTEND_AI = path.join(__dirname, "..", "..", "..", "js", "ai-assistant.js");
+const FRONTEND_AI = path.join(__dirname, "..", "..", "shared", "ai-assistant.js");
 let ai = null;
 try {
   ai = require(FRONTEND_AI);
