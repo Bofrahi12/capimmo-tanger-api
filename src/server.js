@@ -76,6 +76,11 @@ function buildApp(dbOverride) {
 
   app.use("/api", (req, res) => res.status(404).json({ ok: false, error: "not-found" }));
 
+  // الجذر: صفحة ترحيب بدل 404 — الرابط الأساسي خاصو يبان خدام
+  app.get("/", (req, res) => {
+    res.type("html").send(`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cap Immo Tanger — API</title><style>body{font-family:system-ui,sans-serif;max-width:640px;margin:8vh auto;padding:0 20px;line-height:1.8;color:#123}a{color:#0a6}code{background:#f2f2f2;padding:2px 8px;border-radius:6px;direction:ltr;display:inline-block}</style></head><body><h1>🏠 Cap Immo Tanger — API</h1><p>الخادم يعمل بنجاح. جرّب:</p><ul><li><a href="/api/health"><code>GET /api/health</code></a> — حالة الخادم وعدد العقارات</li><li><code>GET /api/listings?limit=5</code> — قائمة العقارات</li><li><code>POST /api/ai/parse</code> — تحليل استعلام بالدارجة</li></ul><p>الموقع: <a href="https://bofrahi12.github.io/capimmo-tanger/">كاب إيمو طنجة</a></p></body></html>`);
+  });
+
   // معالج أخطاء — لا تسريب stack في الإنتاج
   // eslint-disable-next-line no-unused-vars
   app.use((err, req, res, next) => {
