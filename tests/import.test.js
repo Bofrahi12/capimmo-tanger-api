@@ -1,5 +1,5 @@
 "use strict";
-/* الاستيراد: الـ38 IDs تُحفظ كما هي، والتكرار idempotent */
+/* الاستيراد: كل الـIDs تُحفظ كما هي، والتكرار idempotent */
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const path = require("path");
@@ -10,20 +10,21 @@ function sourceIds() {
   const src = new Function(require("fs").readFileSync(LISTINGS_FILE, "utf8") + "; return LISTINGS;")();
   return src.map((l) => l.id).sort();
 }
+const EXPECTED = sourceIds().length;
 
 test("الاستيراد يحفظ كل الـIDs دون تغيير", async () => {
   const app = await startApp({ seedListings: false });
   try {
     const runImport = require("../src/import-listings");
     const report = await runImport({ db: app.db, fromFile: LISTINGS_FILE });
-    assert.equal(report.total_source, 38);
-    assert.equal(report.inserted, 38);
+    assert.equal(report.total_source, EXPECTED);
+    assert.equal(report.inserted, EXPECTED);
     const dbIds = app.db.prepare("SELECT id FROM listings ORDER BY id").all().map((r) => r.id);
     assert.deepEqual(dbIds, sourceIds());
     // إعادة التشغيل idempotent — تحديث لا إدخال
     const report2 = await runImport({ db: app.db, fromFile: LISTINGS_FILE });
     assert.equal(report2.inserted, 0);
-    assert.equal(report2.updated, 38);
+    assert.equal(report2.updated, EXPECTED);
   } finally {
     await app.stop();
   }

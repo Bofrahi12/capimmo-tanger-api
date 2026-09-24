@@ -2,7 +2,11 @@
 /* اختبارات API الأساسية: health, listings, search, ai/parse, leads, viewings */
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
+const path = require("path");
 const { startApp, api } = require("./helpers");
+
+const LISTINGS_FILE = path.join(__dirname, "..", "..", "data", "listings.js");
+const EXPECTED = new Function(require("fs").readFileSync(LISTINGS_FILE, "utf8") + "; return LISTINGS;")().length;
 
 let app;
 test("setup", async () => { app = await startApp(); });
@@ -12,16 +16,16 @@ test("GET /api/health يعمل ويُظهر المزود وعدد العقارا
   assert.equal(status, 200);
   assert.equal(json.ok, true);
   assert.equal(json.service, "capimmo-api");
-  assert.equal(json.listings_available, 38);
+  assert.equal(json.listings_available, EXPECTED);
   assert.equal(json.provider, "local");
 });
 
 test("GET /api/listings ترقيم وفلترة", async () => {
   const { status, json } = await api(app.base, "GET", "/api/listings?limit=5&page=1");
   assert.equal(status, 200);
-  assert.equal(json.total, 38);
+  assert.equal(json.total, EXPECTED);
   assert.equal(json.listings.length, 5);
-  assert.equal(json.pages, 8);
+  assert.equal(json.pages, Math.ceil(EXPECTED / 5));
   const tangier = await api(app.base, "GET", "/api/listings?city=" + encodeURIComponent("طنجة") + "&limit=50");
   assert.ok(tangier.json.total > 20);
   assert.ok(tangier.json.listings.every((l) => l.city === "طنجة"));

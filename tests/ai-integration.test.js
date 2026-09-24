@@ -3,14 +3,18 @@
  * القاعدة الذهبية: لا عقار في الرد إلا وهو في قاعدة البيانات. */
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
+const path = require("path");
 const { startApp, api } = require("./helpers");
+
+const LISTINGS_FILE = path.join(__dirname, "..", "..", "data", "listings.js");
+const EXPECTED = new Function(require("fs").readFileSync(LISTINGS_FILE, "utf8") + "; return LISTINGS;")().length;
 
 let app;
 let dbIds;
 test("setup", async () => {
   app = await startApp();
   dbIds = new Set(app.db.prepare("SELECT id FROM listings").all().map((r) => r.id));
-  assert.equal(dbIds.size, 38);
+  assert.equal(dbIds.size, EXPECTED);
 });
 
 test("chat: مثال القبول الكامل — نتائج حقيقية فقط", async () => {
