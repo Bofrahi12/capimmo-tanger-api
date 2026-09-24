@@ -3,14 +3,15 @@ const express = require("express");
 const { config } = require("../config");
 const { activeProvider } = require("../lib/providers");
 const { countAvailable } = require("../lib/search");
+const { ah } = require("../lib/async");
 
 const router = express.Router();
 const STARTED = Date.now();
 
-router.get("/", (req, res) => {
+router.get("/", ah(async (req, res) => {
   const db = req.app.locals.db;
   let listings = null;
-  try { listings = countAvailable(db); } catch { /* لا نكسر health */ }
+  try { listings = await countAvailable(db); } catch { /* لا نكسر health */ }
   res.json({
     ok: true,
     service: "capimmo-api",
@@ -20,6 +21,6 @@ router.get("/", (req, res) => {
     listings_available: listings,
     time: new Date().toISOString(),
   });
-});
+}));
 
 module.exports = router;

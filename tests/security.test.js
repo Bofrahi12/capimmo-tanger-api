@@ -3,6 +3,7 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const { startApp, api } = require("./helpers");
+const { get } = require("../src/db");
 
 let app;
 test("setup", async () => { app = await startApp({ env: { RATE_LIMIT_GENERAL: "10000" } }); });
@@ -17,7 +18,7 @@ test("XSS في اسم العميل — يُخزَّن كنص خام مقطوع (
   const evil = "<script>alert(1)</script>".repeat(20);
   const { status, json } = await api(app.base, "POST", "/api/leads", { name: evil, phone: "0612345678" });
   assert.equal(status, 201);
-  const row = app.db.prepare("SELECT name FROM leads WHERE id = ?").get(json.id);
+  const row = await get(app.db, "SELECT name FROM leads WHERE id = ?", [json.id]);
   assert.ok(row.name.length <= 120, "الطول مقطوع");
   assert.equal(row.name, evil.slice(0, 120), "يُخزَّن حرفياً دون تحويل");
 });

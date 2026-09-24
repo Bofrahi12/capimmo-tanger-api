@@ -9,11 +9,11 @@ const { getDb } = require("./db");
 const { createLimiter } = require("./lib/ratelimit");
 const { hashIp } = require("./lib/tokens");
 
-function buildApp(dbOverride) {
+async function buildApp(dbOverride) {
   const app = express();
   app.disable("x-powered-by");
   app.set("trust proxy", 1);
-  const db = dbOverride || getDb();
+  const db = dbOverride || (await getDb());
   app.locals.db = db;
 
   // ترويسات أمنية أساسية
@@ -95,13 +95,13 @@ function buildApp(dbOverride) {
   return app;
 }
 
-function start() {
+async function start() {
   const problems = config.nodeEnv === "production" ? require("./config").assertProductionReady() : [];
   if (problems.length) {
     console.error("إعداد الإنتاج ناقص:\n- " + problems.join("\n- "));
     process.exit(1);
   }
-  const app = buildApp();
+  const app = await buildApp();
   app.listen(config.port, () => {
     const { activeProvider } = require("./lib/providers");
     console.log(`capimmo-api يعمل على :${config.port} — provider=${activeProvider().name}`);

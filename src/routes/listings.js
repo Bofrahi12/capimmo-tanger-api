@@ -3,7 +3,9 @@
  * GET /api/listings/:id — تفاصيل عقار واحد
  * نفس أسماء الحقول في data/listings.js (1:1). */
 const express = require("express");
+const { all, get } = require("../db");
 const { rowToListing } = require("../lib/search");
+const { ah } = require("../lib/async");
 
 const router = express.Router();
 const MAX_LIMIT = 50;
@@ -30,7 +32,7 @@ function parseListQuery(q) {
   return out;
 }
 
-router.get("/", (req, res) => {
+router.get("/", ah(async (req, res) => {
   const db = req.app.locals.db;
   const f = parseListQuery(req.query);
   const where = ["status != 'unavailable'"];
@@ -51,10 +53,13 @@ router.get("/", (req, res) => {
     "newest": "date_verified DESC, date_added DESC",
   }[f.sort];
 
-  const total = db.prepare(`SELECT COUNT(*) AS c FROM listings WHERE ${where.join(" AND ")}`).get(...params).c;
-  const rows = db.prepare(
-    `SELECT * FROM listings WHERE ${where.join(" AND ")} ORDER BY ${order} LIMIT ? OFFSET ?`
-  ).all(...params, f.limit, (f.page - 1) * f.limit);
+  const t = await get(db, `SELECT COUNT(*) AS c FROM listings WHERE ${where.join(" AND ")}`, params);
+  const total = t ? t.c : 0;
+  const rows = await all(
+    db,
+    `SELECT * FROM listings WHERE ${where.join(" AND ")} ORDER BY ${order} LIMIT ? OFFSET ?`,
+    [...params, f.limit, (f.page - 1) * f.limit]
+  );
 
   res.json({
     ok: true,
@@ -64,14 +69,14 @@ router.get("/", (req, res) => {
     pages: Math.ceil(total / f.limit),
     listings: rows.map(rowToListing),
   });
-});
+}));
 
-router.get("/:id", (req, res) => {
+router.get("/:id", ah(async (req, res) => {
   const db = req.app.locals.db;
   const id = String(req.params.id).slice(0, 120);
-  const row = db.prepare("SELECT * FROM listings WHERE id = ?").get(id);
+  const row = await get(db, "SELECT * FROM listings WHERE id = ?", [id]);
   if (!row || row.status === "unavailable") return res.status(404).json({ ok: false, error: "not-found" });
   res.json({ ok: true, listing: rowToListing(row) });
-});
+}));
 
 module.exports = router;

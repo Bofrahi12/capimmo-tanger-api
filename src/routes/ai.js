@@ -7,6 +7,8 @@ const { parseText, validateFilters } = require("../lib/parser");
 const { searchDb, nearMatchesDb } = require("../lib/search");
 const { chat, activeProvider } = require("../lib/providers");
 const { hashIp } = require("../lib/tokens");
+const { ah } = require("../lib/async");
+const { run } = require("../db");
 
 const router = express.Router();
 const MAX_RESULTS = 6;
@@ -18,28 +20,30 @@ function summarize(l) {
   };
 }
 
-function logAi(db, req, intent, f, count, ms) {
+async function logAi(db, req, intent, f, count, ms) {
   try {
-    db.prepare(
-      "INSERT INTO ai_logs (provider, intent, city, property_type, result_count, latency_ms, ip_hash) VALUES (?,?,?,?,?,?,?)"
-    ).run(
-      activeProvider().name, intent || null, (f && f.city) || null,
-      (f && f.property_type) || null, count, ms, hashIp(req.ip)
+    await run(
+      db,
+      "INSERT INTO ai_logs (provider, intent, city, property_type, result_count, latency_ms, ip_hash) VALUES (?,?,?,?,?,?,?)",
+      [
+        activeProvider().name, intent || null, (f && f.city) || null,
+        (f && f.property_type) || null, count, ms, hashIp(req.ip),
+      ]
     );
   } catch { /* السجل لا يكسر الرد */ }
 }
 
 /* الواجهة الحالية ترسل { text } وتتوقع الفلاتر مباشرة */
-router.post("/parse", (req, res) => {
+router.post("/parse", ah(async (req, res) => {
   const t0 = Date.now();
   const text = req.body && typeof req.body.text === "string" ? req.body.text : "";
   if (!text.trim()) return res.status(400).json({ ok: false, error: "text-required" });
   if (text.length > 2000) return res.status(400).json({ ok: false, error: "text-too-long" });
   const f = parseText(text);
   if (!f) return res.status(422).json({ ok: false, error: "parse-failed" });
-  logAi(req.app.locals.db, req, f.intent, f, null, Date.now() - t0);
+  logAi(req.app.locals.db, req, f.intent, f, null, Date.now() - t0); // خلفية — لا ننتظر
   res.json({ ok: true, provider: "local-deterministic", filters: f });
-});
+}));
 
 function validHistory(h) {
   if (h === undefined) return [];
@@ -69,7 +73,7 @@ const SYSTEM_PROMPT = `أنت مساعد «كاب إيمو طنجة» العقا
 4. أذكر أرقام العقارات [id] عند الإشارة إليها. لا تكشف أرقام هواتف البائعين الخاصة.
 5. كن مختصراً ومفيداً، واقترح التواصل واتساب مع الوكالة عند الاهتمام.`;
 
-router.post("/chat", async (req, res) => {
+router.post("/chat", ah(async (req, res) => {
   const t0 = Date.now();
   const db = req.app.locals.db;
   const body = req.body || {};
@@ -85,9 +89,9 @@ router.post("/chat", async (req, res) => {
   let listings = [];
   let relaxedNotes = [];
   if (f.intent === "search" || f.intent === "compare") {
-    listings = searchDb(db, f).slice(0, MAX_RESULTS);
+    listings = (await searchDb(db, f)).slice(0, MAX_RESULTS);
     if (!listings.length) {
-      const nm = nearMatchesDb(db, f);
+      const nm = await nearMatchesDb(db, f);
       listings = nm.list;
       relaxedNotes = nm.notes;
     }
@@ -124,6 +128,6 @@ router.post("/chat", async (req, res) => {
     reply, // نص LLM المؤرَّض، أو null عندما provider=local
     grounded: true,
   });
-});
+}));
 
 module.exports = router;

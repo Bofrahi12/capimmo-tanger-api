@@ -17,6 +17,11 @@ const ROOT = path.resolve(__dirname, "..", "..");
 const config = {
   port: num("PORT", 3100),
   dbPath: str("DATABASE_PATH", path.join(__dirname, "..", "data", "capimmo.db")),
+  // قاعدة البيانات — تُفضَّل DATABASE_URL:
+  //   محلي: file:/abs/path.db   |   تُرسو: libsql://host.turso.io
+  // DATABASE_PATH القديم ما زال يُقبل كبديل (يُحوَّل إلى file: تلقائياً)
+  dbUrl: str("DATABASE_URL", "") || "file:" + str("DATABASE_PATH", path.join(__dirname, "..", "data", "capimmo.db")),
+  dbAuthToken: str("DATABASE_AUTH_TOKEN", "") || str("TURSO_AUTH_TOKEN", ""),
   aiProvider: str("AI_PROVIDER", "local").toLowerCase(),
   aiApiKey: str("AI_API_KEY", ""),
   aiApiBase: str("AI_API_BASE", ""),

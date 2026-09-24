@@ -4,13 +4,14 @@ const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const bcrypt = require("bcryptjs");
 const { startApp, api } = require("./helpers");
+const { get, run } = require("../src/db");
 
 let app, token;
 test("setup + seed admin", async () => {
   app = await startApp({ env: { TOKEN_SECRET: "test-secret-0123456789abcdef-test", RATE_LIMIT_GENERAL: "10000" } });
   const hash = bcrypt.hashSync("S3cret-Password!", 10);
-  app.db.prepare("INSERT INTO users (name, phone, password_hash, role) VALUES (?,?,?,?)")
-    .run("المدير", "0693981822", hash, "admin");
+  await run(app.db, "INSERT INTO users (name, phone, password_hash, role) VALUES (?,?,?,?)",
+    ["المدير", "0693981822", hash, "admin"]);
 });
 
 test("دخول صحيح → رمز", async () => {
@@ -33,12 +34,12 @@ test("GET /api/admin/leads بالرمز", async () => {
 });
 
 test("PATCH حالة عميل", async () => {
-  const lead = app.db.prepare("SELECT id FROM leads ORDER BY id DESC LIMIT 1").get();
+  const lead = await get(app.db, "SELECT id FROM leads ORDER BY id DESC LIMIT 1");
   const { status } = await api(app.base, "PATCH", "/api/admin/leads/" + lead.id, { status: "contacted" }, {
     Authorization: "Bearer " + token,
   });
   assert.equal(status, 200);
-  assert.equal(app.db.prepare("SELECT status FROM leads WHERE id = ?").get(lead.id).status, "contacted");
+  assert.equal((await get(app.db, "SELECT status FROM leads WHERE id = ?", [lead.id])).status, "contacted");
 });
 
 test("إضافة عقار (editor+) ثم أرشفة (admin فقط)", async () => {
@@ -60,8 +61,8 @@ test("إضافة عقار (editor+) ثم أرشفة (admin فقط)", async () =>
 
 test("محرر لا يستطيع الأرشفة (admin فقط)", async () => {
   const hash = bcrypt.hashSync("pw", 10);
-  app.db.prepare("INSERT INTO users (name, phone, password_hash, role) VALUES (?,?,?,?)")
-    .run("محرر", "0600000000", hash, "editor");
+  await run(app.db, "INSERT INTO users (name, phone, password_hash, role) VALUES (?,?,?,?)",
+    ["محرر", "0600000000", hash, "editor"]);
   const login = await api(app.base, "POST", "/api/auth/login", { login: "0600000000", password: "pw" });
   const etoken = login.json.token;
   const del = await api(app.base, "DELETE", "/api/admin/listings/agency-malabata-studio", undefined, {

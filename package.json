@@ -1,9 +1,10 @@
 {
   "dependencies": {
+    "@libsql/client": "^0.18.0",
     "bcryptjs": "^2.4.3",
     "express": "^4.21.2"
   },
-  "description": "Cap Immo Tanger \u2014 backend API (Express + SQLite): listings, search, grounded AI, leads, admin",
+  "description": "Cap Immo Tanger — backend API (Express + SQLite): listings, search, grounded AI, leads, admin",
   "engines": {
     "node": ">=22.5"
   },

@@ -4,6 +4,7 @@ const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const path = require("path");
 const { startApp, api } = require("./helpers");
+const { all, get } = require("../src/db");
 
 const LISTINGS_FILE = path.join(__dirname, "..", "..", "data", "listings.js");
 function sourceIds() {
@@ -19,7 +20,7 @@ test("الاستيراد يحفظ كل الـIDs دون تغيير", async () =>
     const report = await runImport({ db: app.db, fromFile: LISTINGS_FILE });
     assert.equal(report.total_source, EXPECTED);
     assert.equal(report.inserted, EXPECTED);
-    const dbIds = app.db.prepare("SELECT id FROM listings ORDER BY id").all().map((r) => r.id);
+    const dbIds = (await all(app.db, "SELECT id FROM listings ORDER BY id")).map((r) => r.id);
     assert.deepEqual(dbIds, sourceIds());
     // إعادة التشغيل idempotent — تحديث لا إدخال
     const report2 = await runImport({ db: app.db, fromFile: LISTINGS_FILE });
@@ -46,9 +47,9 @@ test("عقار الوكالة المحذوف من المصدر يُحفَظ (ل�
     const report = await runImport({ db: app.db, fromFile: hackedFile });
     assert.equal(report.preserved_agency, 1, "عقار الوكالة يُحفظ");
     assert.equal(report.marked_unavailable, 1, "العقار العادي يُؤرشف");
-    const st = app.db.prepare("SELECT status FROM listings WHERE id = ?").get(normalId).status;
+    const st = (await get(app.db, "SELECT status FROM listings WHERE id = ?", [normalId])).status;
     assert.equal(st, "unavailable");
-    const ast = app.db.prepare("SELECT status FROM listings WHERE id = ?").get(agencyId).status;
+    const ast = (await get(app.db, "SELECT status FROM listings WHERE id = ?", [agencyId])).status;
     assert.notEqual(ast, "unavailable", "عقار الوكالة لا يُؤرشف");
     fs.unlinkSync(hackedFile);
   } finally {

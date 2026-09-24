@@ -5,6 +5,7 @@ const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const path = require("path");
 const { startApp, api } = require("./helpers");
+const { all, get } = require("../src/db");
 
 const LISTINGS_FILE = path.join(__dirname, "..", "..", "data", "listings.js");
 const EXPECTED = new Function(require("fs").readFileSync(LISTINGS_FILE, "utf8") + "; return LISTINGS;")().length;
@@ -13,7 +14,7 @@ let app;
 let dbIds;
 test("setup", async () => {
   app = await startApp();
-  dbIds = new Set(app.db.prepare("SELECT id FROM listings").all().map((r) => r.id));
+  dbIds = new Set((await all(app.db, "SELECT id FROM listings")).map((r) => r.id));
   assert.equal(dbIds.size, EXPECTED);
 });
 
@@ -66,7 +67,7 @@ test("chat: رسالة طويلة تُرفض", async () => {
 
 test("سجل ai_logs يُكتب بدون نص الرسائل", async () => {
   await api(app.base, "POST", "/api/ai/chat", { message: "شقة فطنجة" });
-  const log = app.db.prepare("SELECT * FROM ai_logs ORDER BY id DESC LIMIT 1").get();
+  const log = await get(app.db, "SELECT * FROM ai_logs ORDER BY id DESC LIMIT 1");
   assert.ok(log);
   assert.equal(log.provider, "local");
   const cols = Object.keys(log).join(",");

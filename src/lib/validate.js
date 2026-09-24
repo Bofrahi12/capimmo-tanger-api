@@ -1,5 +1,6 @@
 "use strict";
 /* تحقق صارم من كل مدخلات الـAPI — نفس قواعد الواجهة. */
+const { get } = require("../db");
 
 const PHONE_RE = /^0[67]\d{8}$/; // مغربي: يبدأ بـ 06 أو 07
 
@@ -46,12 +47,12 @@ function validateLead(b) {
   return { ok: true, lead: { name, phone, city, budget, preferences, source } };
 }
 
-function validateViewing(b, db) {
+async function validateViewing(b, db) {
   if (!b || typeof b !== "object") return { ok: false, error: "invalid-body" };
   if (b.website) return { ok: false, error: "spam" };
   const listing_id = cleanStr(b.listing_id, 120);
   if (!listing_id) return { ok: false, error: "listing-required" };
-  const exists = db.prepare("SELECT 1 FROM listings WHERE id = ? AND status != 'unavailable'").get(listing_id);
+  const exists = await get(db, "SELECT 1 FROM listings WHERE id = ? AND status != 'unavailable'", [listing_id]);
   if (!exists) return { ok: false, error: "listing-not-found" };
   const name = cleanStr(b.name, 120);
   if (!name) return { ok: false, error: "name-required" };

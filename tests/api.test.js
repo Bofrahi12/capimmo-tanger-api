@@ -4,6 +4,7 @@ const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const path = require("path");
 const { startApp, api } = require("./helpers");
+const { get } = require("../src/db");
 
 const LISTINGS_FILE = path.join(__dirname, "..", "..", "data", "listings.js");
 const EXPECTED = new Function(require("fs").readFileSync(LISTINGS_FILE, "utf8") + "; return LISTINGS;")().length;
@@ -79,7 +80,7 @@ test("POST /api/leads — إنشاء وتحقق", async () => {
   });
   assert.equal(status, 201);
   assert.ok(json.id > 0);
-  const row = app.db.prepare("SELECT * FROM leads WHERE id = ?").get(json.id);
+  const row = await get(app.db, "SELECT * FROM leads WHERE id = ?", [json.id]);
   assert.equal(row.name, "أحمد");
   assert.equal(row.phone, "0612345678");
   assert.equal(row.source, "ai");

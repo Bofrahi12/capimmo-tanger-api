@@ -4,6 +4,7 @@
  * حقن الصفوف في global.LISTINGS مؤقتاً. آمن لأن searchListings
  * متزامن بالكامل: لا يوجد await بين الحقن والاستعادة. */
 const path = require("path");
+const { all, get } = require("../db");
 
 if (typeof global.LISTINGS === "undefined") global.LISTINGS = [];
 if (typeof global.SOUQ_CONFIG === "undefined") global.SOUQ_CONFIG = {};
@@ -43,8 +44,8 @@ function listingToRow(l) {
 }
 
 /** بحث مرتب — نفس searchListings في الواجهة (ترتيب/تسجيل/بدائل) */
-function searchDb(db, filters) {
-  const rows = db.prepare("SELECT * FROM listings WHERE status != 'unavailable'").all();
+async function searchDb(db, filters) {
+  const rows = await all(db, "SELECT * FROM listings WHERE status != 'unavailable'");
   const listings = rows.map(rowToListing);
   const prev = global.LISTINGS;
   global.LISTINGS = listings;
@@ -56,8 +57,8 @@ function searchDb(db, filters) {
 }
 
 /** بدائل مخففة معلنة عند انعدام النتائج — نفس nearMatches */
-function nearMatchesDb(db, filters) {
-  const rows = db.prepare("SELECT * FROM listings WHERE status != 'unavailable'").all();
+async function nearMatchesDb(db, filters) {
+  const rows = await all(db, "SELECT * FROM listings WHERE status != 'unavailable'");
   const prev = global.LISTINGS;
   global.LISTINGS = rows.map(rowToListing);
   try {
@@ -67,8 +68,9 @@ function nearMatchesDb(db, filters) {
   }
 }
 
-function countAvailable(db) {
-  return db.prepare("SELECT COUNT(*) AS c FROM listings WHERE status != 'unavailable'").get().c;
+async function countAvailable(db) {
+  const r = await get(db, "SELECT COUNT(*) AS c FROM listings WHERE status != 'unavailable'");
+  return r ? r.c : 0;
 }
 
 module.exports = { rowToListing, listingToRow, searchDb, nearMatchesDb, countAvailable, featureMatch: ai.featureMatch };

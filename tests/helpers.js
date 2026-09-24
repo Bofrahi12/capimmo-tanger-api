@@ -1,6 +1,7 @@
 "use strict";
 /* مساعد مشترك لاختبارات الـbackend: يشغّل التطبيق على قاعدة اختبار
- * جديدة (ذاكرة) مع استيراد العقارات الـ38، على منفذ عشوائي. */
+ * جديدة (ملف مؤقت) مع استيراد العقارات، على منفذ عشوائي. */
+const fs = require("fs");
 const path = require("path");
 
 const SRC = path.join(__dirname, "..", "src");
@@ -16,20 +17,24 @@ async function startApp({ env = {}, seedListings = true } = {}) {
   clearSrcCache();
   Object.assign(process.env, { NODE_ENV: "test" }, env);
   const { buildApp } = require("../src/server");
-  const { testDb } = require("../src/db");
-  const db = testDb();
+  const { testDb, closeDb } = require("../src/db");
+  const db = await testDb();
   if (seedListings) {
     const runImport = require("../src/import-listings");
     await runImport({ db, fromFile: LISTINGS_FILE });
   }
-  const app = buildApp(db);
+  const app = await buildApp(db);
   const server = await new Promise((resolve) => {
     const s = app.listen(0, "127.0.0.1", () => resolve(s));
   });
   const base = `http://127.0.0.1:${server.address().port}`;
   return {
     base, db, app,
-    stop: () => new Promise((resolve) => server.close(resolve)),
+    stop: async () => {
+      await new Promise((resolve) => server.close(resolve));
+      await closeDb(db);
+      if (db._testFile) { try { fs.unlinkSync(db._testFile); } catch { /* تجاهل */ } }
+    },
   };
 }
 

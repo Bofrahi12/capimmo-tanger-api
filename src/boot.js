@@ -27,7 +27,7 @@ async function main() {
 
   runStep("seed-admin", ["seed-admin.js"]); // best effort: يتجاوز إن لم توجد ADMIN_PASSWORD
   console.log("[boot] تشغيل الخادم…");
-  require("./server.js").start();
+  await require("./server.js").start();
 }
 
 main().catch((e) => { console.error("[boot] خطأ قاتل:", e.message); process.exit(1); });
