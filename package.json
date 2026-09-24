@@ -1,0 +1,21 @@
+{
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "express": "^4.21.2"
+  },
+  "description": "Cap Immo Tanger \u2014 backend API (Express + SQLite): listings, search, grounded AI, leads, admin",
+  "engines": {
+    "node": ">=22.5"
+  },
+  "main": "src/server.js",
+  "name": "capimmo-api",
+  "scripts": {
+    "import": "node src/import-listings.js",
+    "migrate": "node src/migrate.js",
+    "seed-admin": "node src/seed-admin.js",
+    "start": "node src/server.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "type": "commonjs",
+  "version": "1.0.0"
+}
