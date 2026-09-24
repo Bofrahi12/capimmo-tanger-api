@@ -7,7 +7,7 @@ const path = require("path");
 
 if (typeof global.LISTINGS === "undefined") global.LISTINGS = [];
 if (typeof global.SOUQ_CONFIG === "undefined") global.SOUQ_CONFIG = {};
-const ai = require(path.join(__dirname, "..", "..", "..", "js", "ai-assistant.js"));
+const ai = require(path.join(__dirname, "..", "..", "shared", "ai-assistant.js"));
 
 const BOOL_FIELDS = ["furnished", "parking", "elevator", "negotiable", "photo_real", "agency_direct", "spotlight"];
 const BOOL_NOT_NULL = new Set(["photo_real", "agency_direct", "spotlight"]);
