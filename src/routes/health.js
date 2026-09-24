@@ -18,6 +18,7 @@ router.get("/", ah(async (req, res) => {
     version: "1.0.0",
     uptime_s: Math.floor((Date.now() - STARTED) / 1000),
     provider: activeProvider().name,
+    db_backend: /^(libsql|https?):\/\//i.test(config.dbUrl || "") ? "turso" : "local",
     listings_available: listings,
     time: new Date().toISOString(),
   });
